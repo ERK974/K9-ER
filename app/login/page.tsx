@@ -12,41 +12,49 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   async function login() {
+    console.log("LOGIN CLICKED") // debug
     setLoading(true)
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error || !data.user) {
-      alert("Email ou mot de passe incorrect")
-      setLoading(false)
-      return
-    }
+      if (error || !data?.user) {
+        alert("Email ou mot de passe incorrect")
+        console.log("AUTH ERROR:", error)
+        setLoading(false)
+        return
+      }
 
-    // 🔐 récupérer rôle utilisateur
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single()
+      // 🔐 récupération rôle
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single()
 
-    if (profileError || !profile) {
-      await supabase.auth.signOut()
-      alert("Profil introuvable")
-      setLoading(false)
-      return
-    }
+      if (profileError || !profile) {
+        await supabase.auth.signOut()
+        alert("Profil introuvable")
+        console.log("PROFILE ERROR:", profileError)
+        setLoading(false)
+        return
+      }
 
-    // 🚀 REDIRECTION INTELLIGENTE
-    if (profile.role === "admin") {
-      router.push("/admin")
-    } else if (profile.role === "client") {
-      router.push("/client")
-    } else {
-      await supabase.auth.signOut()
-      alert("Accès refusé")
+      // 🚀 redirection selon rôle
+      if (profile.role === "admin") {
+        router.push("/admin")
+      } else if (profile.role === "client") {
+        router.push("/client")
+      } else {
+        await supabase.auth.signOut()
+        alert("Accès refusé")
+      }
+    } catch (err) {
+      console.log("LOGIN CRASH:", err)
+      alert("Erreur inattendue")
     }
 
     setLoading(false)
@@ -74,7 +82,11 @@ export default function LoginPage() {
       <button
         onClick={login}
         disabled={loading}
-        style={{ padding: 10, width: "100%" }}
+        style={{
+          padding: 10,
+          width: "100%",
+          cursor: "pointer",
+        }}
       >
         {loading ? "Connexion..." : "Se connecter"}
       </button>
