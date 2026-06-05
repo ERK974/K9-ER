@@ -9,86 +9,65 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
 
   async function login() {
-    console.log("LOGIN CLICKED") // debug
-    setLoading(true)
+    console.log("START LOGIN")
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-      if (error || !data?.user) {
-        alert("Email ou mot de passe incorrect")
-        console.log("AUTH ERROR:", error)
-        setLoading(false)
-        return
-      }
+    console.log("AUTH RESULT:", data)
+    console.log("AUTH ERROR:", error)
 
-      // 🔐 récupération rôle
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single()
-
-      if (profileError || !profile) {
-        await supabase.auth.signOut()
-        alert("Profil introuvable")
-        console.log("PROFILE ERROR:", profileError)
-        setLoading(false)
-        return
-      }
-
-      // 🚀 redirection selon rôle
-      if (profile.role === "admin") {
-        router.push("/admin")
-      } else if (profile.role === "client") {
-        router.push("/client")
-      } else {
-        await supabase.auth.signOut()
-        alert("Accès refusé")
-      }
-    } catch (err) {
-      console.log("LOGIN CRASH:", err)
-      alert("Erreur inattendue")
+    if (error || !data.user) {
+      alert("Erreur login")
+      return
     }
 
-    setLoading(false)
+    console.log("USER ID:", data.user.id)
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", data.user.id)
+      .single()
+
+    console.log("PROFILE:", profile)
+    console.log("PROFILE ERROR:", profileError)
+
+    if (!profile) {
+      alert("Profil absent")
+      return
+    }
+
+    if (profile.role === "admin") {
+      console.log("GO ADMIN")
+      router.push("/admin")
+    } else {
+      console.log("GO CLIENT")
+      router.push("/client")
+    }
   }
 
   return (
-    <main style={{ padding: 30, maxWidth: 400 }}>
-      <h1>🔐 Connexion</h1>
-
+    <main style={{ padding: 30 }}>
       <input
-        placeholder="Email"
+        placeholder="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        style={{ width: "100%", marginBottom: 10, padding: 10 }}
       />
 
       <input
         type="password"
-        placeholder="Mot de passe"
+        placeholder="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        style={{ width: "100%", marginBottom: 10, padding: 10 }}
       />
 
-      <button
-        onClick={login}
-        disabled={loading}
-        style={{
-          padding: 10,
-          width: "100%",
-          cursor: "pointer",
-        }}
-      >
-        {loading ? "Connexion..." : "Se connecter"}
+      <button onClick={login}>
+        Se connecter
       </button>
     </main>
   )
